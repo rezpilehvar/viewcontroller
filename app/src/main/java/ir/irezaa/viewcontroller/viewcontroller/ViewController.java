@@ -36,10 +36,18 @@ public abstract class ViewController {
     protected void onPresentAnimationStart() {
     }
 
-    protected void onPopAnimationEnd(boolean canceled) {
+    protected void onPresentAnimationProgressChanged(float progress) {
+
     }
 
     protected void onPopAnimationStart() {
+    }
+
+    protected void onPopAnimationProgressChanged(float progress) {
+
+    }
+
+    protected void onPopAnimationEnd(boolean canceled) {
     }
 
     protected void onResume() {

@@ -4,16 +4,13 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 
 import java.util.ArrayList;
 
@@ -29,6 +26,7 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
     private PresenterContainer backContainer;
 
     private Delegate delegate;
+    private TransitionDelegate transitionDelegate;
     private int counter;
 
     private AccelerateDecelerateInterpolator accelerateDecelerateInterpolator = new AccelerateDecelerateInterpolator();
@@ -48,6 +46,10 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
     public Delegate getDelegate() {
         return delegate;
+    }
+
+    public void setTransitionDelegate(TransitionDelegate transitionDelegate) {
+        this.transitionDelegate = transitionDelegate;
     }
 
     @Override
@@ -86,10 +88,10 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
         }
 
         if (currentViewController != null) {
-            removeViewInternal(frontContainer,currentViewController,false,false);
-            addViewInternal(backContainer,currentViewController,false,true);
+            removeViewInternal(frontContainer, currentViewController, false, false, false);
+            addViewInternal(backContainer, currentViewController, false, true, false);
         }
-        addViewInternal(frontContainer,viewController, animated,false);
+        addViewInternal(frontContainer, viewController, animated, false, true);
         viewController.onParentAttached();
 
         viewControllers.add(viewController);
@@ -108,12 +110,12 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
         }
     }
 
-    private void addViewInternal(final PresenterContainer container , final ViewController viewController, boolean animated , boolean removeAllViews) {
+    private void addViewInternal(final PresenterContainer container, final ViewController viewController, boolean animated, boolean removeAllViews, final boolean callTransitionDelegate) {
         if (removeAllViews) {
             container.removeAllViews();
         }
 
-        container.addView(viewController.contentView , new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        container.addView(viewController.contentView, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
         if (animated) {
             Animator animator = viewController.getPresentAnimation();
@@ -124,29 +126,63 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                 animatorSet.setInterpolator(accelerateDecelerateInterpolator);
                 int width = container.getMeasuredWidth();
 
-                animatorSet.playTogether(
-                        ObjectAnimator.ofFloat(viewController.contentView, "alpha", 0.0f, 1.0f),
+                ObjectAnimator alphaAnimator = ObjectAnimator.ofFloat(viewController.contentView, "alpha", 0.0f, 1.0f);
+
+                if (callTransitionDelegate) {
+                    alphaAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                        @Override
+                        public void onAnimationUpdate(ValueAnimator animation) {
+                            float animationProgress = (float) animation.getAnimatedValue();
+                            viewController.onPresentAnimationProgressChanged(animationProgress);
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPresentAnimationProgressChanged(prevViewController, currentViewController, animationProgress);
+                            }
+                        }
+                    });
+                }
+
+                animatorSet.playTogether(alphaAnimator,
                         ObjectAnimator.ofFloat(viewController.contentView, "translationX", width / 2, 0));
 
                 animatorSet.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationCancel(Animator animation) {
-                        viewController.onPresentAnimationEnd(true);
+                        if (callTransitionDelegate) {
+                            viewController.onPresentAnimationEnd(true);
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPresentAnimationEnd(prevViewController, currentViewController, true);
+                            }
+                        }
                     }
 
                     @Override
                     public void onAnimationEnd(Animator animation) {
-                        viewController.onPresentAnimationEnd(false);
+                        if (callTransitionDelegate) {
+                            viewController.onPresentAnimationEnd(false);
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPresentAnimationEnd(prevViewController, currentViewController, false);
+                            }
+                        }
                     }
 
                     @Override
                     public void onAnimationStart(Animator animation) {
-                        viewController.onPresentAnimationStart();
+                        if (callTransitionDelegate) {
+                            viewController.onPresentAnimationStart();
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPresentAnimationStart(currentViewController, viewController);
+                            }
+                        }
                     }
 
                     @Override
                     public void onAnimationStart(Animator animation, boolean isReverse) {
-                        viewController.onPresentAnimationStart();
+                        if (callTransitionDelegate) {
+                            viewController.onPresentAnimationStart();
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPresentAnimationStart(currentViewController, viewController);
+                            }
+                        }
                     }
                 });
 
@@ -154,6 +190,17 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
             }
 
             animator.start();
+        } else {
+            if (callTransitionDelegate) {
+                viewController.onPresentAnimationStart();
+                if (transitionDelegate != null) {
+                    transitionDelegate.onPresentAnimationStart(currentViewController, viewController);
+                }
+                viewController.onPresentAnimationEnd(false);
+                if (transitionDelegate != null) {
+                    transitionDelegate.onPresentAnimationEnd(currentViewController, viewController, false);
+                }
+            }
         }
     }
 
@@ -174,12 +221,12 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
             }
         }
 
-        removeViewInternal(backContainer,prevViewController,false,false);
-        addViewInternal(frontContainer,prevViewController,false,false);
+        removeViewInternal(backContainer, prevViewController, false, false, false);
+        addViewInternal(frontContainer, prevViewController, false, false, false);
 
         currentViewController.contentView.bringToFront();
         viewControllers.remove(currentViewController);
-        removeViewInternal(frontContainer,currentViewController, animated,false);
+        removeViewInternal(frontContainer, currentViewController, animated, false, true);
         currentViewController.onPause();
         currentViewController.onViewControllerDestroy();
 
@@ -191,11 +238,11 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
         if (viewControllers.size() > 1) {
             prevViewController = viewControllers.get(viewControllers.size() - 2);
-            addViewInternal(backContainer,prevViewController,false,true);
+            addViewInternal(backContainer, prevViewController, false, true, false);
         }
     }
 
-    private void removeViewInternal(final PresenterContainer container , final ViewController viewController, boolean animated , final boolean allViews) {
+    private void removeViewInternal(final PresenterContainer container, final ViewController viewController, boolean animated, final boolean allViews, final boolean callTransitionDelegate) {
         if (viewController == null || viewController.contentView == null) {
             return;
         }
@@ -209,14 +256,35 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                 animatorSet.setInterpolator(accelerateDecelerateInterpolator);
                 int width = container.getMeasuredWidth();
 
-                animatorSet.playTogether(
-                        ObjectAnimator.ofFloat(viewController.contentView, "alpha", 1.0f, 0.0f),
+                ObjectAnimator alphaAnimator = ObjectAnimator.ofFloat(viewController.contentView, "alpha", 1.0f, 0.0f);
+
+                if (callTransitionDelegate) {
+                    alphaAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                        @Override
+                        public void onAnimationUpdate(ValueAnimator animation) {
+                            float animationProgress = (float) animation.getAnimatedValue();
+                            viewController.onPopAnimationProgressChanged(animationProgress);
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPopAnimationProgressChanged(viewController, currentViewController, animationProgress);
+                            }
+                        }
+                    });
+                }
+
+                animatorSet.playTogether(alphaAnimator,
                         ObjectAnimator.ofFloat(viewController.contentView, "translationX", 0, width / 2));
 
                 animatorSet.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationCancel(Animator animation) {
-                        viewController.onPopAnimationEnd(true);
+                        if (callTransitionDelegate) {
+                            viewController.onPopAnimationEnd(true);
+
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPopAnimationEnd(viewController,currentViewController , true);
+                            }
+                        }
+
                         if (allViews) {
                             container.removeAllViews();
                         }
@@ -225,7 +293,13 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationEnd(Animator animation) {
-                        viewController.onPopAnimationEnd(false);
+                        if (callTransitionDelegate) {
+                            viewController.onPopAnimationEnd(true);
+
+                            if (transitionDelegate != null) {
+                                transitionDelegate.onPopAnimationEnd(viewController,currentViewController , false);
+                            }
+                        }
                         if (allViews) {
                             container.removeAllViews();
                         }
@@ -235,11 +309,17 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                     @Override
                     public void onAnimationStart(Animator animation) {
                         viewController.onPopAnimationStart();
+                        if (transitionDelegate != null) {
+                            transitionDelegate.onPopAnimationStart(viewController, currentViewController);
+                        }
                     }
 
                     @Override
                     public void onAnimationStart(Animator animation, boolean isReverse) {
                         viewController.onPopAnimationStart();
+                        if (transitionDelegate != null) {
+                            transitionDelegate.onPopAnimationStart(viewController, currentViewController);
+                        }
                     }
                 });
 
@@ -248,6 +328,17 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
             animator.start();
         } else {
+            if (callTransitionDelegate) {
+                viewController.onPopAnimationStart();
+                if (transitionDelegate != null) {
+                    transitionDelegate.onPopAnimationStart(currentViewController, prevViewController);
+                }
+                viewController.onPopAnimationEnd(false);
+                if (transitionDelegate != null) {
+                    transitionDelegate.onPopAnimationEnd(currentViewController, prevViewController,false);
+                }
+            }
+
             if (allViews) {
                 container.removeAllViews();
             }
@@ -267,10 +358,10 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
         }
 
         if (viewController == prevViewController) {
-            removeViewInternal(backContainer,prevViewController,false,true);
+            removeViewInternal(backContainer, prevViewController, false, true, false);
             if (viewControllers.size() > 2) {
                 prevViewController = viewControllers.get(viewControllers.size() - 3);
-                addViewInternal(backContainer,prevViewController,false,false);
+                addViewInternal(backContainer, prevViewController, false, false, false);
             }
         }
 
@@ -324,9 +415,24 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
             super(context);
         }
     }
+
     public interface Delegate {
         void viewControllerWillPresent(ViewController viewController);
 
         boolean viewControllerWillDestroy(ViewController viewController);
+    }
+
+    public interface TransitionDelegate {
+        void onPresentAnimationStart(ViewController from, ViewController to);
+
+        void onPresentAnimationProgressChanged(ViewController from, ViewController to, float progress);
+
+        void onPresentAnimationEnd(ViewController from, ViewController to, boolean canceled);
+
+        void onPopAnimationStart(ViewController from, ViewController to);
+
+        void onPopAnimationProgressChanged(ViewController from, ViewController to, float progress);
+
+        void onPopAnimationEnd(ViewController from, ViewController to , boolean canceled);
     }
 }

@@ -112,7 +112,7 @@ public class MainPageViewController extends ViewController {
         presentMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ((MainActivity) v.getContext()).viewControllerPresenter.presentViewController(new MainPageViewController(Color.BLUE),true);
+                ((MainActivity) v.getContext()).viewControllerPresenter.presentViewController(new MainPageViewController(Color.WHITE), true);
             }
         });
 
@@ -147,6 +147,18 @@ public class MainPageViewController extends ViewController {
     protected void onPresentAnimationStart() {
         super.onPresentAnimationStart();
         Log.i("ViewController", "onPresentAnimationStart() num : " + num);
+    }
+
+    @Override
+    protected void onPresentAnimationProgressChanged(float progress) {
+        super.onPresentAnimationProgressChanged(progress);
+        Log.i("ViewController", "onPresentAnimationProgressChanged() num : " + num + " progress : " + progress);
+    }
+
+    @Override
+    protected void onPopAnimationProgressChanged(float progress) {
+        super.onPopAnimationProgressChanged(progress);
+        Log.i("ViewController", "onPopAnimationProgressChanged() num : " + num + " progress : " + progress);
     }
 
     @Override
