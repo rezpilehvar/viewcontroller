@@ -29,6 +29,9 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
     private TransitionDelegate transitionDelegate;
     private int counter;
 
+    private boolean presentAnimationInProgress = false;
+    private boolean popAnimationInProgress = false;
+
     private AccelerateDecelerateInterpolator accelerateDecelerateInterpolator = new AccelerateDecelerateInterpolator();
 
     public ViewControllerPresenter(Context context) {
@@ -132,10 +135,12 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                     alphaAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                         @Override
                         public void onAnimationUpdate(ValueAnimator animation) {
-                            float animationProgress = (float) animation.getAnimatedValue();
-                            viewController.onPresentAnimationProgressChanged(animationProgress);
-                            if (transitionDelegate != null) {
-                                transitionDelegate.onPresentAnimationProgressChanged(prevViewController, currentViewController, animationProgress);
+                            if (presentAnimationInProgress) {
+                                float animationProgress = (float) animation.getAnimatedValue();
+                                viewController.onPresentAnimationProgressChanged(animationProgress);
+                                if (transitionDelegate != null) {
+                                    transitionDelegate.onPresentAnimationProgressChanged(prevViewController, currentViewController, animationProgress);
+                                }
                             }
                         }
                     });
@@ -147,6 +152,7 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                 animatorSet.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationCancel(Animator animation) {
+                        presentAnimationInProgress = false;
                         if (callTransitionDelegate) {
                             viewController.onPresentAnimationEnd(true);
                             if (transitionDelegate != null) {
@@ -157,6 +163,8 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationEnd(Animator animation) {
+                        presentAnimationInProgress = false;
+
                         if (callTransitionDelegate) {
                             viewController.onPresentAnimationEnd(false);
                             if (transitionDelegate != null) {
@@ -167,6 +175,8 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationStart(Animator animation) {
+                        presentAnimationInProgress = true;
+
                         if (callTransitionDelegate) {
                             viewController.onPresentAnimationStart();
                             if (transitionDelegate != null) {
@@ -177,6 +187,8 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationStart(Animator animation, boolean isReverse) {
+                        presentAnimationInProgress = true;
+
                         if (callTransitionDelegate) {
                             viewController.onPresentAnimationStart();
                             if (transitionDelegate != null) {
@@ -262,10 +274,12 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                     alphaAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                         @Override
                         public void onAnimationUpdate(ValueAnimator animation) {
-                            float animationProgress = (float) animation.getAnimatedValue();
-                            viewController.onPopAnimationProgressChanged(animationProgress);
-                            if (transitionDelegate != null) {
-                                transitionDelegate.onPopAnimationProgressChanged(viewController, currentViewController, animationProgress);
+                            if (popAnimationInProgress) {
+                                float animationProgress = (float) animation.getAnimatedValue();
+                                viewController.onPopAnimationProgressChanged(animationProgress);
+                                if (transitionDelegate != null) {
+                                    transitionDelegate.onPopAnimationProgressChanged(viewController, currentViewController, animationProgress);
+                                }
                             }
                         }
                     });
@@ -277,6 +291,8 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
                 animatorSet.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationCancel(Animator animation) {
+                        popAnimationInProgress = false;
+
                         if (callTransitionDelegate) {
                             viewController.onPopAnimationEnd(true);
 
@@ -293,6 +309,8 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationEnd(Animator animation) {
+                        popAnimationInProgress = false;
+
                         if (callTransitionDelegate) {
                             viewController.onPopAnimationEnd(true);
 
@@ -308,17 +326,21 @@ public class ViewControllerPresenter extends FrameLayout implements Presenter {
 
                     @Override
                     public void onAnimationStart(Animator animation) {
+                        popAnimationInProgress = true;
+
                         viewController.onPopAnimationStart();
                         if (transitionDelegate != null) {
-                            transitionDelegate.onPopAnimationStart(viewController, currentViewController);
+                            transitionDelegate.onPopAnimationStart(currentViewController, prevViewController);
                         }
                     }
 
                     @Override
                     public void onAnimationStart(Animator animation, boolean isReverse) {
+                        popAnimationInProgress = true;
+
                         viewController.onPopAnimationStart();
                         if (transitionDelegate != null) {
-                            transitionDelegate.onPopAnimationStart(viewController, currentViewController);
+                            transitionDelegate.onPopAnimationStart(currentViewController, prevViewController);
                         }
                     }
                 });

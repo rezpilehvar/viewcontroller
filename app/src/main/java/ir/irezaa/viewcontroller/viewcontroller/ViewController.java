@@ -8,7 +8,7 @@ import android.view.ViewGroup;
 public abstract class ViewController {
     protected View contentView;
     protected ViewControllerPresenter parentPresenter;
-    protected int num;
+    public int num;
 
     protected boolean onViewControllerCreate(Bundle bundle) {
         return true;

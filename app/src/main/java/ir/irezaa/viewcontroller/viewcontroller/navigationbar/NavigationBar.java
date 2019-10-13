@@ -8,13 +8,15 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import ir.irezaa.viewcontroller.R;
+import ir.irezaa.viewcontroller.viewcontroller.ViewController;
+import ir.irezaa.viewcontroller.viewcontroller.ViewControllerPresenter;
 
-public class NavigationBar extends FrameLayout implements NavigationBarImp {
+public class NavigationBar extends FrameLayout implements NavigationBarImp , ViewControllerPresenter.TransitionDelegate {
     private static Drawable bottomShadow;
 
     public NavigationBar(Context context) {
         super(context);
-        setBackgroundColor(Color.WHITE);
+        setBackgroundColor(Color.DKGRAY);
         bottomShadow = getResources().getDrawable(R.drawable.header_shadow).mutate();
     }
 
@@ -37,5 +39,40 @@ public class NavigationBar extends FrameLayout implements NavigationBarImp {
     @Override
     public View getView() {
         return this;
+    }
+
+    @Override
+    public ViewControllerPresenter.TransitionDelegate getTransitionDelegate() {
+        return this;
+    }
+
+    @Override
+    public void onPresentAnimationStart(ViewController from, ViewController to) {
+
+    }
+
+    @Override
+    public void onPresentAnimationProgressChanged(ViewController from, ViewController to, float progress) {
+
+    }
+
+    @Override
+    public void onPresentAnimationEnd(ViewController from, ViewController to, boolean canceled) {
+
+    }
+
+    @Override
+    public void onPopAnimationStart(ViewController from, ViewController to) {
+
+    }
+
+    @Override
+    public void onPopAnimationProgressChanged(ViewController from, ViewController to, float progress) {
+
+    }
+
+    @Override
+    public void onPopAnimationEnd(ViewController from, ViewController to, boolean canceled) {
+
     }
 }

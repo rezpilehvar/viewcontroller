@@ -25,31 +25,49 @@ public class NavigationViewController extends ViewController implements Presente
         presenter.setTransitionDelegate(new ViewControllerPresenter.TransitionDelegate() {
             @Override
             public void onPresentAnimationStart(ViewController from, ViewController to) {
+                if (navigationBar.getTransitionDelegate() != null) {
+                    navigationBar.getTransitionDelegate().onPresentAnimationStart(from, to);
+                }
                 Log.i("ControllerTransition", "onPresentAnimationStart -> from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
 
             @Override
             public void onPresentAnimationProgressChanged(ViewController from, ViewController to, float progress) {
+                if (navigationBar.getTransitionDelegate() != null) {
+                    navigationBar.getTransitionDelegate().onPresentAnimationProgressChanged(from, to, progress);
+                }
                 Log.i("ControllerTransition", "onPresentAnimationProgressChanged -> progress : " + progress + " from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
 
             @Override
             public void onPresentAnimationEnd(ViewController from, ViewController to, boolean canceled) {
+                if (navigationBar.getTransitionDelegate() != null) {
+                    navigationBar.getTransitionDelegate().onPresentAnimationEnd(from, to, canceled);
+                }
                 Log.i("ControllerTransition", "onPresentAnimationEnd -> from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
 
             @Override
             public void onPopAnimationStart(ViewController from, ViewController to) {
+                if (navigationBar.getTransitionDelegate() != null) {
+                    navigationBar.getTransitionDelegate().onPopAnimationStart(from, to);
+                }
                 Log.i("ControllerTransition", "onPopAnimationStart -> from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
 
             @Override
             public void onPopAnimationProgressChanged(ViewController from, ViewController to, float progress) {
+                if (navigationBar.getTransitionDelegate() != null) {
+                    navigationBar.getTransitionDelegate().onPopAnimationProgressChanged(from, to, progress);
+                }
                 Log.i("ControllerTransition", "onPopAnimationProgressChanged -> progress : " + progress + " from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
 
             @Override
-            public void onPopAnimationEnd(ViewController from, ViewController to , boolean canceled) {
+            public void onPopAnimationEnd(ViewController from, ViewController to, boolean canceled) {
+                if (navigationBar instanceof ViewControllerPresenter.TransitionDelegate) {
+                    ((ViewControllerPresenter.TransitionDelegate) navigationBar).onPopAnimationEnd(from, to, canceled);
+                }
                 Log.i("ControllerTransition", "onPopAnimationEnd -> from : " + (from != null ? from.num : "null") + " to : " + (to != null ? to.num : "null"));
             }
         });
